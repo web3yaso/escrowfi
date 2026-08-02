@@ -31,7 +31,8 @@ export type SaVerifier = (input: {
   readonly amount: bigint;
 }) => Promise<SaVerdict>;
 
-export type AdvanceStatus = "OUTSTANDING" | "REPAID" | "WRITTEN_OFF";
+export type AdvanceStatus =
+  | "PENDING_PAYOUT" | "OUTSTANDING" | "REPAID" | "CANCELLED" | "WRITTEN_OFF";
 
 export interface Advance {
   /** Caller-supplied idempotency key. Same key → same advance, ever. */
@@ -43,6 +44,12 @@ export interface Advance {
   readonly fee: bigint;
   readonly status: AdvanceStatus;
   readonly verdict: SaVerdict;
+  /** Present = escrowed path (Task 2); absent = credit path. */
+  readonly invoiceId?: string;
+  readonly advancedAt: number;
+  readonly dueAt: number;
+  readonly repaidAt?: number;
+  readonly payoutTxHash?: string;
 }
 
 export type LedgerEntry =
@@ -54,11 +61,15 @@ export type LedgerEntry =
       readonly advanceId: string;
       readonly principal: bigint;
       readonly fee: bigint;
-    };
+    }
+  | { readonly kind: "PAYOUT_CONFIRMED"; readonly advanceId: string; readonly txHash: string }
+  | { readonly kind: "PAYOUT_CANCELLED"; readonly advanceId: string };
 
 export interface PoolState {
   /** USDC sitting in the pool, available to advance. */
   readonly liquidity: bigint;
+  /** Principal locked for a payout that hasn't been confirmed on-chain yet. */
+  readonly pendingPayout: bigint;
   /** Principal currently advanced and not yet repaid. */
   readonly outstanding: bigint;
   /** Fees earned by LPs since inception. */

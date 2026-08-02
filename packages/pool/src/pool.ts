@@ -41,6 +41,7 @@ export class Pool {
   readonly #advances = new Map<string, Advance>();
   readonly #lpDeposits = new Map<string, bigint>();
   #liquidity = 0n;
+  #pendingPayout = 0n;
   #outstanding = 0n;
   #feesAccrued = 0n;
 
@@ -65,13 +66,19 @@ export class Pool {
     saHash: string;
     payee: string;
     amount: bigint;
+    invoiceId?: string;
+    advancedAt: number;
+    dueAt: number;
   }): Promise<AdvanceResult> {
     const existing = this.#advances.get(input.advanceId);
     if (existing) {
       const same =
         existing.saHash === input.saHash &&
         existing.payee === input.payee &&
-        existing.principal === input.amount;
+        existing.principal === input.amount &&
+        existing.advancedAt === input.advancedAt &&
+        existing.dueAt === input.dueAt &&
+        existing.invoiceId === input.invoiceId;
       return same
         ? { ok: true, advance: existing, replay: true }
         : {
@@ -111,12 +118,15 @@ export class Pool {
       payee: input.payee,
       principal: input.amount,
       fee: advanceFee(input.amount, this.#config.feeBps),
-      status: "OUTSTANDING",
+      status: "PENDING_PAYOUT",
       verdict,
+      ...(input.invoiceId !== undefined ? { invoiceId: input.invoiceId } : {}),
+      advancedAt: input.advancedAt,
+      dueAt: input.dueAt,
     };
     this.#advances.set(advance.advanceId, advance);
     this.#liquidity -= advance.principal;
-    this.#outstanding += advance.principal;
+    this.#pendingPayout += advance.principal;
     this.#ledger.push({
       kind: "ADVANCE",
       advanceId: advance.advanceId,
@@ -126,13 +136,52 @@ export class Pool {
   }
 
   /**
+   * Confirm that the off-pool payout to the payee landed on-chain. Moves the
+   * advance from the pending-payout bucket into outstanding principal.
+   */
+  confirmPayout(advanceId: string, txHash: string): Advance {
+    const advance = this.#mustGet(advanceId);
+    if (advance.status !== "PENDING_PAYOUT") {
+      throw new Error(`cannot confirm payout: advance ${advanceId} is ${advance.status}`);
+    }
+    const confirmed: Advance = { ...advance, status: "OUTSTANDING", payoutTxHash: txHash };
+    this.#advances.set(advanceId, confirmed);
+    this.#pendingPayout -= advance.principal;
+    this.#outstanding += advance.principal;
+    this.#ledger.push({ kind: "PAYOUT_CONFIRMED", advanceId, txHash });
+    return confirmed;
+  }
+
+  /**
+   * Cancel a payout that never landed. Restores the locked principal to
+   * available liquidity in full (invariant 7).
+   */
+  cancelPayout(advanceId: string): Advance {
+    const advance = this.#mustGet(advanceId);
+    if (advance.status !== "PENDING_PAYOUT") {
+      throw new Error(`cannot cancel payout: advance ${advanceId} is ${advance.status}`);
+    }
+    const cancelled: Advance = { ...advance, status: "CANCELLED" };
+    this.#advances.set(advanceId, cancelled);
+    this.#pendingPayout -= advance.principal;
+    this.#liquidity += advance.principal;
+    this.#ledger.push({ kind: "PAYOUT_CANCELLED", advanceId });
+    return cancelled;
+  }
+
+  #mustGet(advanceId: string): Advance {
+    const advance = this.#advances.get(advanceId);
+    if (!advance) throw new Error(`unknown advance: ${advanceId}`);
+    return advance;
+  }
+
+  /**
    * Settle the sender-side repayment for an outstanding advance.
    * Expects principal + fee exactly; anything else is a hard error because
    * silent partial settlement would corrupt LP accounting.
    */
-  settleRepayment(advanceId: string, amount: bigint): Advance {
-    const advance = this.#advances.get(advanceId);
-    if (!advance) throw new Error(`unknown advance: ${advanceId}`);
+  settleRepayment(advanceId: string, amount: bigint, repaidAt: number): Advance {
+    const advance = this.#mustGet(advanceId);
     if (advance.status !== "OUTSTANDING") {
       if (advance.status === "REPAID") return advance; // idempotent replay
       throw new Error(`advance ${advanceId} is ${advance.status}`);
@@ -143,7 +192,7 @@ export class Pool {
         `repayment mismatch for ${advanceId}: expected ${due}, got ${amount}`,
       );
     }
-    const settled: Advance = { ...advance, status: "REPAID" };
+    const settled: Advance = { ...advance, status: "REPAID", repaidAt };
     this.#advances.set(advanceId, settled);
     this.#liquidity += advance.principal + advance.fee;
     this.#outstanding -= advance.principal;
@@ -160,6 +209,7 @@ export class Pool {
   state(): PoolState {
     return {
       liquidity: this.#liquidity,
+      pendingPayout: this.#pendingPayout,
       outstanding: this.#outstanding,
       feesAccrued: this.#feesAccrued,
       lpDeposits: new Map(this.#lpDeposits),
