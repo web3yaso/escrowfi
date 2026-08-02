@@ -52,8 +52,24 @@ export interface Advance {
   readonly payoutTxHash?: string;
 }
 
+/** Per-invoice escrow: importer funds earmarked for one trade, isolated from LP liquidity. */
+export interface Escrow {
+  readonly invoiceId: string;
+  readonly importer: string;
+  readonly amount: bigint;
+  readonly status: "FUNDED" | "RELEASED";
+  readonly txHashes: readonly string[];
+}
+
 export type LedgerEntry =
   | { readonly kind: "DEPOSIT"; readonly lp: string; readonly amount: bigint }
+  | {
+      readonly kind: "ESCROW_DEPOSIT";
+      readonly invoiceId: string;
+      readonly importer: string;
+      readonly amount: bigint;
+      readonly txHash?: string;
+    }
   | { readonly kind: "WITHDRAW"; readonly lp: string; readonly amount: bigint }
   | { readonly kind: "ADVANCE"; readonly advanceId: string; readonly amount: bigint }
   | {
@@ -76,6 +92,8 @@ export interface PoolState {
   readonly feesAccrued: bigint;
   /** Per-LP deposited principal (simple share model for the MVP). */
   readonly lpDeposits: ReadonlyMap<string, bigint>;
+  /** Per-invoice escrow bucket — isolated from liquidity (invariant 6). */
+  readonly escrows: ReadonlyMap<string, Escrow>;
 }
 
 /** Errors are typed rejections, not thrown strings. */
@@ -83,7 +101,10 @@ export type AdvanceRejection =
   | { readonly code: "SA_REJECTED"; readonly reason: string }
   | { readonly code: "INSUFFICIENT_LIQUIDITY"; readonly liquidity: bigint }
   | { readonly code: "DUPLICATE_MISMATCH"; readonly advanceId: string }
-  | { readonly code: "INVALID_AMOUNT" };
+  | { readonly code: "INVALID_AMOUNT" }
+  | { readonly code: "ESCROW_INSUFFICIENT"; readonly escrowAmount: bigint }
+  | { readonly code: "ESCROW_NOT_FOUND"; readonly invoiceId: string }
+  | { readonly code: "INVOICE_BUSY"; readonly invoiceId: string };
 
 export type AdvanceResult =
   | { readonly ok: true; readonly advance: Advance; readonly replay: boolean }

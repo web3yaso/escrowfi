@@ -17,6 +17,7 @@
 import type {
   Advance,
   AdvanceResult,
+  Escrow,
   LedgerEntry,
   PoolState,
   SaVerifier,
@@ -40,6 +41,7 @@ export class Pool {
   readonly #ledger: LedgerEntry[] = [];
   readonly #advances = new Map<string, Advance>();
   readonly #lpDeposits = new Map<string, bigint>();
+  readonly #escrows = new Map<string, Escrow>();
   #liquidity = 0n;
   #pendingPayout = 0n;
   #outstanding = 0n;
@@ -55,6 +57,33 @@ export class Pool {
     this.#liquidity += amount;
     this.#lpDeposits.set(lp, (this.#lpDeposits.get(lp) ?? 0n) + amount);
     this.#ledger.push({ kind: "DEPOSIT", lp, amount });
+  }
+
+  /**
+   * Importer locks funds against one invoice. Escrowed funds are earmarked:
+   * they never enter liquidity and can only leave via the release waterfall
+   * (invariant 6). Top-ups are allowed while FUNDED.
+   */
+  escrowDeposit(input: { invoiceId: string; importer: string; amount: bigint; txHash?: string }): Escrow {
+    if (input.amount <= 0n) throw new Error("escrow amount must be > 0");
+    const existing = this.#escrows.get(input.invoiceId);
+    if (existing?.status === "RELEASED") {
+      throw new Error(`escrow ${input.invoiceId} is already released`);
+    }
+    const escrow: Escrow = {
+      invoiceId: input.invoiceId,
+      importer: input.importer,
+      amount: (existing?.amount ?? 0n) + input.amount,
+      status: "FUNDED",
+      txHashes: input.txHash !== undefined
+        ? [...(existing?.txHashes ?? []), input.txHash]
+        : (existing?.txHashes ?? []),
+    };
+    this.#escrows.set(input.invoiceId, escrow);
+    this.#ledger.push({ kind: "ESCROW_DEPOSIT", invoiceId: input.invoiceId,
+      importer: input.importer, amount: input.amount,
+      ...(input.txHash !== undefined ? { txHash: input.txHash } : {}) });
+    return escrow;
   }
 
   /**
@@ -103,6 +132,25 @@ export class Pool {
         ok: false,
         rejection: { code: "SA_REJECTED", reason: verdict.reason ?? "unspecified" },
       };
+    }
+
+    // Escrow gate AFTER the SA verdict, BEFORE liquidity: rejection order is
+    // a contract (SA → escrow → liquidity).
+    if (input.invoiceId !== undefined) {
+      const escrow = this.#escrows.get(input.invoiceId);
+      if (!escrow || escrow.status !== "FUNDED") {
+        return { ok: false, rejection: { code: "ESCROW_NOT_FOUND", invoiceId: input.invoiceId } };
+      }
+      const fee = advanceFee(input.amount, this.#config.feeBps);
+      if (input.amount + fee > escrow.amount) {
+        return { ok: false, rejection: { code: "ESCROW_INSUFFICIENT", escrowAmount: escrow.amount } };
+      }
+      const busy = [...this.#advances.values()].some(
+        (a) => a.invoiceId === input.invoiceId && a.status !== "CANCELLED",
+      );
+      if (busy) {
+        return { ok: false, rejection: { code: "INVOICE_BUSY", invoiceId: input.invoiceId } };
+      }
     }
 
     if (input.amount > this.#liquidity) {
@@ -213,6 +261,7 @@ export class Pool {
       outstanding: this.#outstanding,
       feesAccrued: this.#feesAccrued,
       lpDeposits: new Map(this.#lpDeposits),
+      escrows: new Map(this.#escrows),
     };
   }
 
