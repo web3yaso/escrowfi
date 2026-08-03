@@ -12,6 +12,8 @@ type PoolSummary = {
 };
 
 const usdc = (minor: string): string => `${(Number(minor) / 1e6).toLocaleString()} USDC`;
+/** UI takes whole USDC (decimals ok); the money path stays integer minor units. */
+const toMinor = (u: string): string => String(Math.round(Number(u) * 1e6));
 
 function Result({ data }: { data: { ok: boolean; body: unknown } | null }) {
   if (!data) return null;
@@ -27,9 +29,9 @@ export default function Console() {
   const [busy, setBusy] = useState(false);
   const [results, setResults] = useState<Record<string, { ok: boolean; body: unknown } | null>>({});
   const [invoice, setInvoice] = useState("inv-1");
-  const [escrowAmt, setEscrowAmt] = useState("2000000");
+  const [escrowAmt, setEscrowAmt] = useState("2");
   const [saHash, setSaHash] = useState("");
-  const [advAmt, setAdvAmt] = useState("1500000");
+  const [advAmt, setAdvAmt] = useState("1.5");
   const [seq, setSeq] = useState(1);
 
   const refresh = useCallback(async () => {
@@ -69,9 +71,9 @@ export default function Console() {
             <select value={invoice} onChange={(e) => setInvoice(e.target.value)}>
               {["inv-1", "inv-2", "inv-3"].map((i) => <option key={i}>{i}</option>)}
             </select>
-            <label>Amount (USDC minor units)</label>
+            <label>Amount (USDC)</label>
             <input value={escrowAmt} onChange={(e) => setEscrowAmt(e.target.value)} />
-            <button disabled={busy} onClick={() => act("escrow", "/api/escrow", { invoiceId: invoice, amount: escrowAmt })}>
+            <button disabled={busy} onClick={() => act("escrow", "/api/escrow", { invoiceId: invoice, amount: toMinor(escrowAmt) })}>
               Lock funds
             </button>
             <Result data={results["escrow"] ?? null} />
@@ -88,10 +90,10 @@ export default function Console() {
                 </option>
               ))}
             </select>
-            <label>Advance amount (leg authorizes up to {state ? usdc(state.demo.legAmount) : "…"})</label>
+            <label>Advance amount in USDC (leg authorizes up to {state ? usdc(state.demo.legAmount) : "…"})</label>
             <input value={advAmt} onChange={(e) => setAdvAmt(e.target.value)} />
             <button disabled={busy} onClick={() => {
-              void act("advance", "/api/advance", { advanceId: `a-${invoice}-${seq}`, invoiceId: invoice, saHash, amount: advAmt });
+              void act("advance", "/api/advance", { advanceId: `a-${invoice}-${seq}`, invoiceId: invoice, saHash, amount: toMinor(advAmt) });
               setSeq((n) => n + 1);
             }}>
               Request advance
