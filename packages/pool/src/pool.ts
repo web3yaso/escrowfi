@@ -62,6 +62,17 @@ export class Pool {
     this.#ledger.push({ kind: "DEPOSIT", lp, amount });
   }
 
+  /** LP withdraw, bounded by the LP's own deposits and current liquidity. */
+  withdraw(lp: string, amount: bigint): void {
+    if (amount <= 0n) throw new Error("withdraw amount must be > 0");
+    const deposited = this.#lpDeposits.get(lp) ?? 0n;
+    if (amount > deposited) throw new Error(`withdraw ${amount} exceeds deposits ${deposited} of ${lp}`);
+    if (amount > this.#liquidity) throw new Error(`withdraw ${amount} exceeds liquidity ${this.#liquidity}`);
+    this.#liquidity -= amount;
+    this.#lpDeposits.set(lp, deposited - amount);
+    this.#ledger.push({ kind: "WITHDRAW", lp, amount });
+  }
+
   /**
    * Importer locks funds against one invoice. Escrowed funds are earmarked:
    * they never enter liquidity and can only leave via the release waterfall
