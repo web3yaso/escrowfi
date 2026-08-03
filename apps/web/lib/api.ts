@@ -25,7 +25,11 @@ export async function handling(fn: () => Promise<Response>): Promise<Response> {
     return await fn();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const status = /required|must be|unknown |exceeds|mismatch|already|no pending|escrowed/.test(message) ? 400 : 500;
-    return jsonBig({ error: message }, status);
+    const callerBug = /required|must be|unknown |exceeds|mismatch|already|no pending|escrowed/.test(message);
+    if (callerBug) return jsonBig({ error: message }, 400);
+    // Never echo internal error details to the public — they can carry
+    // connection strings and credentials. Log server-side only.
+    console.error("internal error:", message);
+    return jsonBig({ error: "internal_error" }, 500);
   }
 }

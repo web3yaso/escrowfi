@@ -39,8 +39,11 @@ async function build(): Promise<AppContext> {
   // Accept the names the Vercel/Upstash marketplace integration injects, so
   // the one-click setup works without manual env mapping.
   const env = process.env;
-  const kvUrl = env["KV_URL"] ?? env["KV_REST_API_URL"] ?? env["UPSTASH_REDIS_REST_URL"];
-  const kvToken = env["KV_TOKEN"] ?? env["KV_REST_API_TOKEN"] ?? env["UPSTASH_REDIS_REST_TOKEN"];
+  // REST endpoints only — Vercel also injects KV_URL as a rediss:// protocol
+  // URL, which fetch() cannot use.
+  const kvUrl = [env["KV_REST_API_URL"], env["UPSTASH_REDIS_REST_URL"], env["KV_URL"]]
+    .find((u) => typeof u === "string" && u.startsWith("https://"));
+  const kvToken = env["KV_REST_API_TOKEN"] ?? env["UPSTASH_REDIS_REST_TOKEN"] ?? env["KV_TOKEN"];
   const store = kvUrl && kvToken
     ? makeKvStore({ feeBps: DEMO.feeBps, verify, boot, url: kvUrl, token: kvToken })
     : makeMemoryStore({ feeBps: DEMO.feeBps, verify, boot });
