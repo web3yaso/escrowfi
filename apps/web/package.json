@@ -17,7 +17,8 @@
     "@citely-pay/verify-adapter": "workspace:*",
     "next": "^15.0.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "viem": "^2.55.10"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
