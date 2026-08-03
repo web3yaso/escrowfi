@@ -1,0 +1,25 @@
+{
+  "name": "@citely-pay/verify-adapter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "viem": "^2.0.0"
+  },
+  "devDependencies": {
+    "@citely-pay/pool": "workspace:*",
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.0"
+  }
+}
