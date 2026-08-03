@@ -1,0 +1,17 @@
+{
+  "name": "@citely-pay/passport",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": { ".": { "types": "./src/index.ts", "default": "./src/index.ts" } },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@citely-pay/pool": "workspace:*",
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.0"
+  }
+}

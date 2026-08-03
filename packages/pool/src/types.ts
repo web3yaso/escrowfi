@@ -31,7 +31,8 @@ export type SaVerifier = (input: {
   readonly amount: bigint;
 }) => Promise<SaVerdict>;
 
-export type AdvanceStatus = "OUTSTANDING" | "REPAID" | "WRITTEN_OFF";
+export type AdvanceStatus =
+  | "PENDING_PAYOUT" | "OUTSTANDING" | "REPAID" | "CANCELLED" | "WRITTEN_OFF";
 
 export interface Advance {
   /** Caller-supplied idempotency key. Same key → same advance, ever. */
@@ -43,10 +44,32 @@ export interface Advance {
   readonly fee: bigint;
   readonly status: AdvanceStatus;
   readonly verdict: SaVerdict;
+  /** Present = escrowed path (Task 2); absent = credit path. */
+  readonly invoiceId?: string;
+  readonly advancedAt: number;
+  readonly dueAt: number;
+  readonly repaidAt?: number;
+  readonly payoutTxHash?: string;
+}
+
+/** Per-invoice escrow: importer funds earmarked for one trade, isolated from LP liquidity. */
+export interface Escrow {
+  readonly invoiceId: string;
+  readonly importer: string;
+  readonly amount: bigint;
+  readonly status: "FUNDED" | "RELEASED";
+  readonly txHashes: readonly string[];
 }
 
 export type LedgerEntry =
   | { readonly kind: "DEPOSIT"; readonly lp: string; readonly amount: bigint }
+  | {
+      readonly kind: "ESCROW_DEPOSIT";
+      readonly invoiceId: string;
+      readonly importer: string;
+      readonly amount: bigint;
+      readonly txHash?: string;
+    }
   | { readonly kind: "WITHDRAW"; readonly lp: string; readonly amount: bigint }
   | { readonly kind: "ADVANCE"; readonly advanceId: string; readonly amount: bigint }
   | {
@@ -54,17 +77,49 @@ export type LedgerEntry =
       readonly advanceId: string;
       readonly principal: bigint;
       readonly fee: bigint;
+    }
+  | { readonly kind: "PAYOUT_CONFIRMED"; readonly advanceId: string; readonly txHash: string }
+  | { readonly kind: "PAYOUT_CANCELLED"; readonly advanceId: string }
+  | {
+      readonly kind: "RELEASE";
+      readonly invoiceId: string;
+      readonly advanceId: string;
+      readonly principal: bigint;
+      readonly fee: bigint;
+      readonly residual: bigint;
+    }
+  | {
+      readonly kind: "RESIDUAL_CONFIRMED";
+      readonly invoiceId: string;
+      readonly amount: bigint;
+      readonly txHash: string;
     };
+
+/** Atomic three-way split of a released escrow (the repayment waterfall). */
+export interface ReleaseResult {
+  readonly advance: Advance;
+  readonly principal: bigint;
+  readonly fee: bigint;
+  readonly residual: bigint;
+}
 
 export interface PoolState {
   /** USDC sitting in the pool, available to advance. */
   readonly liquidity: bigint;
+  /** Principal locked for a payout that hasn't been confirmed on-chain yet. */
+  readonly pendingPayout: bigint;
   /** Principal currently advanced and not yet repaid. */
   readonly outstanding: bigint;
   /** Fees earned by LPs since inception. */
   readonly feesAccrued: bigint;
   /** Per-LP deposited principal (simple share model for the MVP). */
   readonly lpDeposits: ReadonlyMap<string, bigint>;
+  /** Per-invoice escrow bucket — isolated from liquidity (invariant 6). */
+  readonly escrows: ReadonlyMap<string, Escrow>;
+  /** Waterfall residual owed to the exporter, until confirmed on-chain. */
+  readonly pendingResidual: ReadonlyMap<string, bigint>;
+  /** All advances ever requested, keyed by advanceId. */
+  readonly advances: ReadonlyMap<string, Advance>;
 }
 
 /** Errors are typed rejections, not thrown strings. */
@@ -72,7 +127,10 @@ export type AdvanceRejection =
   | { readonly code: "SA_REJECTED"; readonly reason: string }
   | { readonly code: "INSUFFICIENT_LIQUIDITY"; readonly liquidity: bigint }
   | { readonly code: "DUPLICATE_MISMATCH"; readonly advanceId: string }
-  | { readonly code: "INVALID_AMOUNT" };
+  | { readonly code: "INVALID_AMOUNT" }
+  | { readonly code: "ESCROW_INSUFFICIENT"; readonly escrowAmount: bigint }
+  | { readonly code: "ESCROW_NOT_FOUND"; readonly invoiceId: string }
+  | { readonly code: "INVOICE_BUSY"; readonly invoiceId: string };
 
 export type AdvanceResult =
   | { readonly ok: true; readonly advance: Advance; readonly replay: boolean }

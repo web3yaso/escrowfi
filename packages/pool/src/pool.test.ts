@@ -14,6 +14,9 @@ const REJECT: SaVerifier = async () => ({
 
 const USDC = (n: number) => BigInt(Math.round(n * 1_000_000));
 
+const T0 = 1_756_700_000_000; // arbitrary epoch ms
+const DUE = T0 + 30 * 86_400_000;
+
 function fundedPool(verify: SaVerifier = PASS, feeBps = 30n) {
   const pool = new Pool({ feeBps, verify });
   pool.deposit("lp-1", USDC(100));
@@ -36,6 +39,8 @@ describe("the invariant: no advance without a verified SA", () => {
       saHash: "0xsa",
       payee: "0xpayee",
       amount: USDC(10),
+      advancedAt: T0,
+      dueAt: DUE,
     });
     expect(result).toEqual({
       ok: false,
@@ -53,6 +58,8 @@ describe("the invariant: no advance without a verified SA", () => {
       saHash: "0xsa",
       payee: "0xpayee",
       amount: USDC(10),
+      advancedAt: T0,
+      dueAt: DUE,
     });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.rejection.code).toBe("SA_REJECTED");
@@ -67,12 +74,17 @@ describe("advance happy path", () => {
       saHash: "0xsa",
       payee: "0xpayee",
       amount: USDC(40),
+      advancedAt: T0,
+      dueAt: DUE,
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.replay).toBe(false);
     expect(result.advance.fee).toBe(USDC(0.12)); // 30bps of 40
     expect(result.advance.verdict.agentId).toBe("854638");
+    expect(pool.state().liquidity).toBe(USDC(60));
+    expect(pool.state().pendingPayout).toBe(USDC(40));
+    pool.confirmPayout("a1", "0xtx1");
     const s = pool.state();
     expect(s.liquidity).toBe(USDC(60));
     expect(s.outstanding).toBe(USDC(40));
@@ -85,6 +97,8 @@ describe("advance happy path", () => {
       saHash: "0xsa",
       payee: "0xpayee",
       amount: USDC(101),
+      advancedAt: T0,
+      dueAt: DUE,
     });
     expect(result).toEqual({
       ok: false,
@@ -101,6 +115,8 @@ describe("idempotency", () => {
       saHash: "0xsa",
       payee: "0xpayee",
       amount: USDC(10),
+      advancedAt: T0,
+      dueAt: DUE,
     };
     const first = await pool.requestAdvance(input);
     const second = await pool.requestAdvance(input);
@@ -117,12 +133,16 @@ describe("idempotency", () => {
       saHash: "0xsa",
       payee: "0xpayee",
       amount: USDC(10),
+      advancedAt: T0,
+      dueAt: DUE,
     });
     const tampered = await pool.requestAdvance({
       advanceId: "a1",
       saHash: "0xsa",
       payee: "0xATTACKER",
       amount: USDC(10),
+      advancedAt: T0,
+      dueAt: DUE,
     });
     expect(tampered).toEqual({
       ok: false,
@@ -140,9 +160,13 @@ describe("repayment", () => {
       saHash: "0xsa",
       payee: "0xpayee",
       amount: USDC(40),
+      advancedAt: T0,
+      dueAt: DUE,
     });
-    const settled = pool.settleRepayment("a1", USDC(40.12));
+    pool.confirmPayout("a1", "0xtx1");
+    const settled = pool.settleRepayment("a1", USDC(40.12), DUE);
     expect(settled.status).toBe("REPAID");
+    expect(settled.repaidAt).toBe(DUE);
     const s = pool.state();
     expect(s.liquidity).toBe(USDC(100.12));
     expect(s.outstanding).toBe(0n);
@@ -156,9 +180,12 @@ describe("repayment", () => {
       saHash: "0xsa",
       payee: "0xpayee",
       amount: USDC(40),
+      advancedAt: T0,
+      dueAt: DUE,
     });
-    expect(() => pool.settleRepayment("a1", USDC(40))).toThrow(/mismatch/);
-    expect(() => pool.settleRepayment("a1", USDC(41))).toThrow(/mismatch/);
+    pool.confirmPayout("a1", "0xtx1");
+    expect(() => pool.settleRepayment("a1", USDC(40), DUE)).toThrow(/mismatch/);
+    expect(() => pool.settleRepayment("a1", USDC(41), DUE)).toThrow(/mismatch/);
   });
 
   it("is idempotent on replayed settlement", async () => {
@@ -168,9 +195,12 @@ describe("repayment", () => {
       saHash: "0xsa",
       payee: "0xpayee",
       amount: USDC(40),
+      advancedAt: T0,
+      dueAt: DUE,
     });
-    pool.settleRepayment("a1", USDC(40.12));
-    const replay = pool.settleRepayment("a1", USDC(40.12));
+    pool.confirmPayout("a1", "0xtx1");
+    pool.settleRepayment("a1", USDC(40.12), DUE);
+    const replay = pool.settleRepayment("a1", USDC(40.12), DUE);
     expect(replay.status).toBe("REPAID");
     expect(pool.state().liquidity).toBe(USDC(100.12)); // unchanged
   });
@@ -186,15 +216,21 @@ describe("accounting conservation", () => {
       saHash: "0x1",
       payee: "0xp1",
       amount: USDC(20),
+      advancedAt: T0,
+      dueAt: DUE,
     });
     await pool.requestAdvance({
       advanceId: "a2",
       saHash: "0x2",
       payee: "0xp2",
       amount: USDC(35),
+      advancedAt: T0,
+      dueAt: DUE,
     });
+    pool.confirmPayout("a1", "0xtx1");
+    pool.confirmPayout("a2", "0xtx2");
     const fee1 = advanceFee(USDC(20), 25n);
-    pool.settleRepayment("a1", USDC(20) + fee1);
+    pool.settleRepayment("a1", USDC(20) + fee1, DUE);
 
     let liquidity = 0n;
     for (const e of pool.ledger()) {
