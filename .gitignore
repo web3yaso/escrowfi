@@ -5,3 +5,4 @@ node_modules/
 .vercel/
 .next/
 next-env.d.ts
+*.tsbuildinfo
