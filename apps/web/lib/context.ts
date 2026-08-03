@@ -36,8 +36,11 @@ async function build(): Promise<AppContext> {
   const verify = makeSaVerifier({ registeredSigners: fixtures.signers, sas: fixtures.sas });
   const chain = pickAdapter(process.env);
   const boot = (pool: import("@citely-pay/pool").Pool): void => pool.deposit("lp-demo", DEMO.lpSeed);
-  const kvUrl = process.env["KV_URL"];
-  const kvToken = process.env["KV_TOKEN"];
+  // Accept the names the Vercel/Upstash marketplace integration injects, so
+  // the one-click setup works without manual env mapping.
+  const env = process.env;
+  const kvUrl = env["KV_URL"] ?? env["KV_REST_API_URL"] ?? env["UPSTASH_REDIS_REST_URL"];
+  const kvToken = env["KV_TOKEN"] ?? env["KV_REST_API_TOKEN"] ?? env["UPSTASH_REDIS_REST_TOKEN"];
   const store = kvUrl && kvToken
     ? makeKvStore({ feeBps: DEMO.feeBps, verify, boot, url: kvUrl, token: kvToken })
     : makeMemoryStore({ feeBps: DEMO.feeBps, verify, boot });
