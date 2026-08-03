@@ -1,1 +1,1 @@
-export { postRelease as POST } from "../../../lib/handlers.js";
+export { postRelease as POST } from "../../../lib/handlers";

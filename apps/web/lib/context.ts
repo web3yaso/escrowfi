@@ -6,8 +6,8 @@ import { pickAdapter } from "@citely-pay/chain";
 import type { ChainAdapter } from "@citely-pay/chain";
 import { demoFixtures, makeSaVerifier } from "@citely-pay/verify-adapter";
 import type { Address } from "viem";
-import { makeMemoryStore, makeKvStore } from "./store.js";
-import type { PoolStore } from "./store.js";
+import { makeMemoryStore, makeKvStore } from "./store";
+import type { PoolStore } from "./store";
 
 export const DEMO = {
   agentId: "854638",

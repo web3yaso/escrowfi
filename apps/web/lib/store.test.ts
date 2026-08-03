@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SaVerifier } from "@citely-pay/pool";
-import { makeMemoryStore } from "./store.js";
+import { makeMemoryStore } from "./store";
 
 const PASS: SaVerifier = async () => ({ ok: true, signer: "0xOp" });
 const T0 = 1_756_700_000_000;

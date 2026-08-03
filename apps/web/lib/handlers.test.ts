@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { makeSimulatedAdapter } from "@citely-pay/chain";
 import { demoFixtures, makeSaVerifier } from "@citely-pay/verify-adapter";
-import { __setAppContext, DEMO } from "./context.js";
-import { makeMemoryStore } from "./store.js";
-import { getPassport, getState, postAdvance, postEscrow, postRelease } from "./handlers.js";
+import { __setAppContext, DEMO } from "./context";
+import { makeMemoryStore } from "./store";
+import { getPassport, getState, postAdvance, postEscrow, postRelease } from "./handlers";
 
 const post = (body: unknown): Request =>
   new Request("http://test.local", { method: "POST", body: JSON.stringify(body) });

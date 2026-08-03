@@ -5,8 +5,8 @@
  * the product, not something the web layer edits.
  */
 import { buildPassport } from "@citely-pay/passport";
-import { getAppContext, DEMO } from "./context.js";
-import { asBigint, asStr, handling, jsonBig, readBody } from "./api.js";
+import { getAppContext, DEMO } from "./context";
+import { asBigint, asStr, handling, jsonBig, readBody } from "./api";
 
 export async function postEscrow(req: Request): Promise<Response> {
   return handling(async () => {

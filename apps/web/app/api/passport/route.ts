@@ -1,1 +1,1 @@
-export { getPassport as GET } from "../../../lib/handlers.js";
+export { getPassport as GET } from "../../../lib/handlers";

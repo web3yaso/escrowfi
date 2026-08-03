@@ -1,1 +1,1 @@
-export { getState as GET } from "../../../lib/handlers.js";
+export { getState as GET } from "../../../lib/handlers";

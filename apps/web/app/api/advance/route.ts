@@ -1,1 +1,1 @@
-export { postAdvance as POST } from "../../../lib/handlers.js";
+export { postAdvance as POST } from "../../../lib/handlers";
