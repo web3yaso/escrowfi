@@ -1,11 +1,11 @@
-# Citely Pay
+# EscrowFi
 
 **SME trade finance on Arc, where the credit gate is a verifiable compliance
 proof — not trust. Every completed cycle becomes a line in an on-ledger,
 re-verifiable Credit Passport.**
 
 A UAE SME exports goods and needs working capital *now*; its buyer pays at
-maturity. Citely Pay closes that gap with three moves:
+maturity. EscrowFi closes that gap with three moves:
 
 1. **Escrow** — the importer locks the invoice amount in the pool (USDC),
    earmarked for that one trade. Conditional protection for the buyer,
