@@ -41,6 +41,42 @@ advance. The failed trade-finance consortia (TradeLens, we.trade, Marco Polo)
 required the whole supply chain to change workflows; this design only has to
 convince one party — the liquidity provider — and the proof does that job.
 
+## Deal Desk → EscrowFi: how the SA travels
+
+Two independent systems that share **no trust — only a proof**. Deal Desk
+issues the Settlement Authorization; EscrowFi never takes its word for it and
+re-verifies everything locally before a cent moves.
+
+```mermaid
+sequenceDiagram
+    participant SME as SME (exporter)
+    participant DD as Deal Desk engine<br/>(ERC-8004 agent #854638)
+    participant MSB as MSB-Agent<br/>(jurisdiction modules)
+    participant EF as EscrowFi pool
+    participant Arc as Arc chain (USDC)
+
+    rect rgba(120,120,120,0.08)
+    Note over SME,MSB: ① Issuance — Deal Desk side
+    SME->>DD: submit trade case (invoice, parties, corridor)
+    DD->>MSB: buy compliance evidence (x402, USDC per call)
+    MSB-->>DD: check results + evidence hash
+    DD->>DD: policy verdict per leg: PASS / HOLD / ESCALATE
+    DD-->>SME: SA — EIP-712-signed, hash-anchored conditional proof
+    end
+
+    rect rgba(15,107,79,0.08)
+    Note over EF,Arc: ② Consumption — EscrowFi side (this repo)
+    SME->>EF: request T+0 advance, presenting the SA
+    EF->>EF: re-verify locally: signature ↔ registered signer,<br/>expiry, a PASS leg naming THIS payee & amount
+    EF->>Arc: USDC advance — only if the proof verifies
+    Arc-->>EF: tx hash → pool ledger → Credit Passport line
+    end
+```
+
+The boundary is the point: a HOLD/ESCALATE leg, a tampered byte, an expired
+or mis-addressed SA all die at EscrowFi's local check — the issuer being
+offline or compromised cannot make the pool pay.
+
 ## Architecture
 
 ```mermaid
