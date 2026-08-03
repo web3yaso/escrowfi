@@ -25,12 +25,13 @@ for the Ignyte Stablecoins Commerce Stack Challenge, Track 2.
 
 | Piece | State |
 |---|---|
-| `packages/pool` — deposit / SA-gated advance / repayment accounting | ✅ 11 tests |
-| Wire pool verifier to deployed Deal Desk verifier service | ⬜ |
-| Circle Wallets (beneficiary embedded wallet) | ⬜ |
-| CCTP + Bridge Kit (beneficiary chain choice) | ⬜ |
-| `apps/web` — payout flow + LP dashboard (single page) | ⬜ |
-| Vercel deployment | ⬜ |
+| `packages/pool/specs` — Quint formal model of the fund-safety core | ✅ 7 invariants, 9 witnesses, 4 scenarios |
+| `packages/pool` — escrow bucket / SA-gated advance / three-state payout / release waterfall / serialization | ✅ 33 tests incl. invariant fuzz harness |
+| `packages/passport` — credit passport derived from the ledger | ✅ 3 tests |
+| Verifier wiring (`@citely/verifier` as a library) | ⬜ |
+| `apps/web` — financing console + passport view | ⬜ |
+| `packages/chain` — Arc testnet USDC adapter | ⬜ |
+| KV persistence + Vercel deployment | ⬜ |
 | Architecture diagram, Circle Product Feedback section | ⬜ |
 
 ## Invariants (each enforced in code, each covered by tests)
