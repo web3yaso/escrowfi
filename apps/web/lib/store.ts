@@ -36,7 +36,11 @@ export function makeMemoryStore(config: StoreConfig): PoolStore {
   };
 }
 
-/** Upstash Redis REST. Optimistic lock: version key must not move mid-write. */
+/** Upstash Redis REST. Optimistic lock: version key must not move mid-write.
+ *  Keys are namespaced — the database may be shared with other projects. */
+const KEY_STATE = "escrowfi:pool-state";
+const KEY_VERSION = "escrowfi:pool-version";
+
 export function makeKvStore(opts: StoreConfig & { url: string; token: string }): PoolStore {
   const call = async (command: unknown[]): Promise<unknown> => {
     const res = await fetch(opts.url, {
@@ -50,7 +54,7 @@ export function makeKvStore(opts: StoreConfig & { url: string; token: string }):
   };
 
   const attempt = async <T>(fn: (pool: Pool) => Promise<T> | T): Promise<{ ok: boolean; result?: T }> => {
-    const [blob, version] = (await Promise.all([call(["GET", "pool-state"]), call(["GET", "pool-version"])])) as [
+    const [blob, version] = (await Promise.all([call(["GET", KEY_STATE]), call(["GET", KEY_VERSION])])) as [
       string | null, string | null,
     ];
     let pool: Pool;
@@ -63,9 +67,9 @@ export function makeKvStore(opts: StoreConfig & { url: string; token: string }):
     const result = await fn(pool);
     const next = Number(version ?? 0) + 1;
     // Compare-and-set via Lua-free two-step: re-read version; if unchanged, write both.
-    const current = (await call(["GET", "pool-version"])) as string | null;
+    const current = (await call(["GET", KEY_VERSION])) as string | null;
     if ((current ?? null) !== (version ?? null)) return { ok: false };
-    await call(["MSET", "pool-state", pool.toJSON(), "pool-version", String(next)]);
+    await call(["MSET", KEY_STATE, pool.toJSON(), KEY_VERSION, String(next)]);
     return { ok: true, result };
   };
 
