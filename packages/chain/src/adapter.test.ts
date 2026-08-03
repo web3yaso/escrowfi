@@ -16,7 +16,10 @@ describe("pickAdapter", () => {
   it("defaults to simulated", () => {
     expect(pickAdapter({}).mode).toBe("simulated");
   });
-  it("arc mode requires all three env vars", () => {
+  it("arc mode requires all four env vars", () => {
     expect(() => pickAdapter({ CHAIN_MODE: "arc" })).toThrow(/ARC_RPC_URL/);
+  });
+  it("an unknown CHAIN_MODE fails closed instead of silently simulating", () => {
+    expect(() => pickAdapter({ CHAIN_MODE: "ARC" })).toThrow(/unknown CHAIN_MODE/);
   });
 });
