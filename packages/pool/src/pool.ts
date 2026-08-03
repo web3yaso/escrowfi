@@ -23,6 +23,22 @@ import type {
   ReleaseResult,
   SaVerifier,
 } from "./types.js";
+import { decodeSnapshot, encodeSnapshot } from "./serde.js";
+
+/** Everything a Pool needs to be rebuilt, minus the injected verifier. */
+export interface PoolSnapshot {
+  readonly feeBps: bigint;
+  readonly liquidity: bigint;
+  readonly pendingPayout: bigint;
+  readonly outstanding: bigint;
+  readonly feesAccrued: bigint;
+  readonly lpDeposits: ReadonlyMap<string, bigint>;
+  readonly escrows: ReadonlyMap<string, Escrow>;
+  readonly pendingResidual: ReadonlyMap<string, bigint>;
+  readonly advances: ReadonlyMap<string, Advance>;
+  readonly releases: ReadonlyMap<string, ReleaseResult>;
+  readonly ledger: readonly LedgerEntry[];
+}
 
 export interface PoolConfig {
   /** Advance fee in basis points, e.g. 30n = 0.30%. */
@@ -309,6 +325,47 @@ export class Pool {
       fee: advance.fee,
     });
     return settled;
+  }
+
+  /** Full internal state as readonly views — the serialization boundary. */
+  snapshot(): PoolSnapshot {
+    return {
+      feeBps: this.#config.feeBps,
+      liquidity: this.#liquidity,
+      pendingPayout: this.#pendingPayout,
+      outstanding: this.#outstanding,
+      feesAccrued: this.#feesAccrued,
+      lpDeposits: new Map(this.#lpDeposits),
+      escrows: new Map(this.#escrows),
+      pendingResidual: new Map(this.#pendingResidual),
+      advances: new Map(this.#advances),
+      releases: new Map(this.#releases),
+      ledger: [...this.#ledger],
+    };
+  }
+
+  /** Rebuild a pool from a snapshot; the verifier is re-injected (functions don't serialize). */
+  static restore(snapshot: PoolSnapshot, verify: SaVerifier): Pool {
+    const pool = new Pool({ feeBps: snapshot.feeBps, verify });
+    pool.#liquidity = snapshot.liquidity;
+    pool.#pendingPayout = snapshot.pendingPayout;
+    pool.#outstanding = snapshot.outstanding;
+    pool.#feesAccrued = snapshot.feesAccrued;
+    for (const [k, v] of snapshot.lpDeposits) pool.#lpDeposits.set(k, v);
+    for (const [k, v] of snapshot.escrows) pool.#escrows.set(k, v);
+    for (const [k, v] of snapshot.pendingResidual) pool.#pendingResidual.set(k, v);
+    for (const [k, v] of snapshot.advances) pool.#advances.set(k, v);
+    for (const [k, v] of snapshot.releases) pool.#releases.set(k, v);
+    pool.#ledger.push(...snapshot.ledger);
+    return pool;
+  }
+
+  toJSON(): string {
+    return encodeSnapshot(this.snapshot());
+  }
+
+  static fromJSON(json: string, verify: SaVerifier): Pool {
+    return Pool.restore(decodeSnapshot(json), verify);
   }
 
   state(): PoolState {
