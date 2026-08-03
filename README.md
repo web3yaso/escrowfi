@@ -25,6 +25,8 @@ never stored, derived from the pool ledger on every read, each line
 re-verifiable by anyone (re-run the SA check live, click through to the
 explorer). Compliance-as-collateral instead of credit committees.
 
+**Live demo:** https://escrowfi-web.vercel.app — Arc testnet, real USDC, KV-persisted.
+
 > Track 2 — Best SME Trade Finance & Working Capital Workflow
 > (Ignyte Stablecoins Commerce Stack Challenge). Settlement engine powered by
 > Deal Desk, our Encode Arc Hackathon project; this repo is the trade-finance
