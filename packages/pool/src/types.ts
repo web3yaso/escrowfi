@@ -118,6 +118,8 @@ export interface PoolState {
   readonly escrows: ReadonlyMap<string, Escrow>;
   /** Waterfall residual owed to the exporter, until confirmed on-chain. */
   readonly pendingResidual: ReadonlyMap<string, bigint>;
+  /** All advances ever requested, keyed by advanceId. */
+  readonly advances: ReadonlyMap<string, Advance>;
 }
 
 /** Errors are typed rejections, not thrown strings. */

@@ -377,6 +377,7 @@ export class Pool {
       lpDeposits: new Map(this.#lpDeposits),
       escrows: new Map(this.#escrows),
       pendingResidual: new Map(this.#pendingResidual),
+      advances: new Map(this.#advances),
     };
   }
 
