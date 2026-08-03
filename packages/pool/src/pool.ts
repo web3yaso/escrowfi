@@ -20,6 +20,7 @@ import type {
   Escrow,
   LedgerEntry,
   PoolState,
+  ReleaseResult,
   SaVerifier,
 } from "./types.js";
 
@@ -42,6 +43,8 @@ export class Pool {
   readonly #advances = new Map<string, Advance>();
   readonly #lpDeposits = new Map<string, bigint>();
   readonly #escrows = new Map<string, Escrow>();
+  readonly #pendingResidual = new Map<string, bigint>();
+  readonly #releases = new Map<string, ReleaseResult>();
   #liquidity = 0n;
   #pendingPayout = 0n;
   #outstanding = 0n;
@@ -224,12 +227,55 @@ export class Pool {
   }
 
   /**
+   * Release waterfall: the escrowed F splits atomically — P + fee back into
+   * liquidity (LP principal + earnings), the residual F − P − fee queued for
+   * the exporter until its on-chain transfer confirms. Escrow release is
+   * irreversible, so the residual is retry-only (no cancel). Idempotent:
+   * replaying a released invoice returns the original result.
+   */
+  releaseEscrow(invoiceId: string, at: number): ReleaseResult {
+    const replay = this.#releases.get(invoiceId);
+    if (replay) return replay;
+    const escrow = this.#escrows.get(invoiceId);
+    if (!escrow) throw new Error(`unknown escrow: ${invoiceId}`);
+    const advance = [...this.#advances.values()].find(
+      (a) => a.invoiceId === invoiceId && a.status === "OUTSTANDING",
+    );
+    if (!advance) throw new Error(`no outstanding advance on invoice ${invoiceId}`);
+    const residual = escrow.amount - advance.principal - advance.fee;
+    const settled: Advance = { ...advance, status: "REPAID", repaidAt: at };
+    this.#advances.set(advance.advanceId, settled);
+    this.#escrows.set(invoiceId, { ...escrow, status: "RELEASED" });
+    this.#liquidity += advance.principal + advance.fee;
+    this.#outstanding -= advance.principal;
+    this.#feesAccrued += advance.fee;
+    if (residual > 0n) this.#pendingResidual.set(invoiceId, residual);
+    this.#ledger.push({ kind: "RELEASE", invoiceId, advanceId: advance.advanceId,
+      principal: advance.principal, fee: advance.fee, residual });
+    const result: ReleaseResult = { advance: settled, principal: advance.principal, fee: advance.fee, residual };
+    this.#releases.set(invoiceId, result);
+    return result;
+  }
+
+  /** Confirm the exporter-tail transfer landed on-chain. Retry-only: no cancel. */
+  confirmResidual(invoiceId: string, txHash: string): bigint {
+    const amount = this.#pendingResidual.get(invoiceId) ?? 0n;
+    if (amount <= 0n) throw new Error(`no pending residual for ${invoiceId}`);
+    this.#pendingResidual.set(invoiceId, 0n);
+    this.#ledger.push({ kind: "RESIDUAL_CONFIRMED", invoiceId, amount, txHash });
+    return amount;
+  }
+
+  /**
    * Settle the sender-side repayment for an outstanding advance.
    * Expects principal + fee exactly; anything else is a hard error because
    * silent partial settlement would corrupt LP accounting.
    */
   settleRepayment(advanceId: string, amount: bigint, repaidAt: number): Advance {
     const advance = this.#mustGet(advanceId);
+    if (advance.invoiceId !== undefined) {
+      throw new Error(`advance ${advanceId} is escrowed; settle it via releaseEscrow`);
+    }
     if (advance.status !== "OUTSTANDING") {
       if (advance.status === "REPAID") return advance; // idempotent replay
       throw new Error(`advance ${advanceId} is ${advance.status}`);
@@ -262,6 +308,7 @@ export class Pool {
       feesAccrued: this.#feesAccrued,
       lpDeposits: new Map(this.#lpDeposits),
       escrows: new Map(this.#escrows),
+      pendingResidual: new Map(this.#pendingResidual),
     };
   }
 

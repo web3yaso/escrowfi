@@ -79,7 +79,29 @@ export type LedgerEntry =
       readonly fee: bigint;
     }
   | { readonly kind: "PAYOUT_CONFIRMED"; readonly advanceId: string; readonly txHash: string }
-  | { readonly kind: "PAYOUT_CANCELLED"; readonly advanceId: string };
+  | { readonly kind: "PAYOUT_CANCELLED"; readonly advanceId: string }
+  | {
+      readonly kind: "RELEASE";
+      readonly invoiceId: string;
+      readonly advanceId: string;
+      readonly principal: bigint;
+      readonly fee: bigint;
+      readonly residual: bigint;
+    }
+  | {
+      readonly kind: "RESIDUAL_CONFIRMED";
+      readonly invoiceId: string;
+      readonly amount: bigint;
+      readonly txHash: string;
+    };
+
+/** Atomic three-way split of a released escrow (the repayment waterfall). */
+export interface ReleaseResult {
+  readonly advance: Advance;
+  readonly principal: bigint;
+  readonly fee: bigint;
+  readonly residual: bigint;
+}
 
 export interface PoolState {
   /** USDC sitting in the pool, available to advance. */
@@ -94,6 +116,8 @@ export interface PoolState {
   readonly lpDeposits: ReadonlyMap<string, bigint>;
   /** Per-invoice escrow bucket — isolated from liquidity (invariant 6). */
   readonly escrows: ReadonlyMap<string, Escrow>;
+  /** Waterfall residual owed to the exporter, until confirmed on-chain. */
+  readonly pendingResidual: ReadonlyMap<string, bigint>;
 }
 
 /** Errors are typed rejections, not thrown strings. */
