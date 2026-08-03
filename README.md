@@ -101,7 +101,7 @@ flowchart LR
 
 ```bash
 pnpm install
-pnpm -r test        # 58 tests: pool (33) · chain (4) · verify-adapter (8) · passport (3) · web (10)
+pnpm -r test        # 53 tests: pool (33) · chain (4) · verify-adapter (8) · passport (3) · web (5)
 pnpm typecheck
 cd apps/web && pnpm dev   # console on http://localhost:3000, simulated chain
 ```
