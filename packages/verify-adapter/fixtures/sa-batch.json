@@ -1,0 +1,207 @@
+{
+ "agentId": "854638",
+ "operatorAddress": "0x45698638CFF60B188E338aa580e11ba9eb560759",
+ "mintedAt": "2026-08-03",
+ "sas": [
+  {
+   "saHash": "0xb413937e47da3373cdcd3ac32e65f17e8792af0452a8073e56ef6a4a44efd550",
+   "sa": {
+    "case_id": "citely-demo-0001",
+    "sa_version": "1",
+    "bound_to": {
+     "job_id": "101",
+     "expires_at": "2027-01-01T00:00:00.000Z"
+    },
+    "modules_used": [
+     {
+      "module_id": "us-msb",
+      "version": "2026.07.1",
+      "evidence_hash": "0x3333333333333333333333333333333333333333333333333333333333333333"
+     }
+    ],
+    "legs": [
+     {
+      "party": "payee-corp",
+      "payee": "0x1111111111111111111111111111111111111111",
+      "amount_nominal": "1500000",
+      "condition": "PASS",
+      "basis": [
+       {
+        "item_id": "msb-1",
+        "verdict": "confirmed_exempt",
+        "source": "31 CFR § 1010.100(ff)"
+       },
+       {
+        "item_id": "msb-2",
+        "verdict": "confirmed_exempt",
+        "source": "31 CFR § 1010.100(ff)"
+       }
+      ],
+      "confidence": "high"
+     }
+    ],
+    "preview": {
+     "condition_summary": "1 leg PASS",
+     "items_covered": 2
+    },
+    "attestation": {
+     "sa_hash": "0xb413937e47da3373cdcd3ac32e65f17e8792af0452a8073e56ef6a4a44efd550",
+     "signer": "0x45698638CFF60B188E338aa580e11ba9eb560759",
+     "signed_at": "2026-07-28T00:00:00.000Z",
+     "signature": "0x739ac0472c1b683d7c6e63b35b20e43685c0d959ffba76078b9212a88052c0704e461b509245a84e07b8edc88f55c6a677de50176e7eee0449c0dd87bcf4d7a71c"
+    }
+   },
+   "provenance": "deal-desk-operator"
+  },
+  {
+   "saHash": "0x16a7751ef239b6769af87fa306a8656ba94ec70e40e6e9dc0b13340eb11629ce",
+   "sa": {
+    "case_id": "citely-demo-0001",
+    "sa_version": "1",
+    "bound_to": {
+     "job_id": "102",
+     "expires_at": "2027-01-01T00:00:00.000Z"
+    },
+    "modules_used": [
+     {
+      "module_id": "us-msb",
+      "version": "2026.07.1",
+      "evidence_hash": "0x3333333333333333333333333333333333333333333333333333333333333333"
+     }
+    ],
+    "legs": [
+     {
+      "party": "payee-corp",
+      "payee": "0x1111111111111111111111111111111111111111",
+      "amount_nominal": "1500000",
+      "condition": "PASS",
+      "basis": [
+       {
+        "item_id": "msb-1",
+        "verdict": "confirmed_exempt",
+        "source": "31 CFR § 1010.100(ff)"
+       },
+       {
+        "item_id": "msb-2",
+        "verdict": "confirmed_exempt",
+        "source": "31 CFR § 1010.100(ff)"
+       }
+      ],
+      "confidence": "high"
+     }
+    ],
+    "preview": {
+     "condition_summary": "1 leg PASS",
+     "items_covered": 2
+    },
+    "attestation": {
+     "sa_hash": "0x16a7751ef239b6769af87fa306a8656ba94ec70e40e6e9dc0b13340eb11629ce",
+     "signer": "0x45698638CFF60B188E338aa580e11ba9eb560759",
+     "signed_at": "2026-07-28T00:00:00.000Z",
+     "signature": "0x6e8a39e97f1dd4229a6650d682c69b0cdc525ac064650f8b45f3f13faa030ca260637d02783c498d6806bec49f3f86e026e3694556cbe6d879e763784b0fbc961c"
+    }
+   },
+   "provenance": "deal-desk-operator"
+  },
+  {
+   "saHash": "0x62e63febf0b9b3b14c7dac3f3cc82c4160ef89b97a524cab104761e66eaeea68",
+   "sa": {
+    "case_id": "citely-demo-0001",
+    "sa_version": "1",
+    "bound_to": {
+     "job_id": "103",
+     "expires_at": "2027-01-01T00:00:00.000Z"
+    },
+    "modules_used": [
+     {
+      "module_id": "us-msb",
+      "version": "2026.07.1",
+      "evidence_hash": "0x3333333333333333333333333333333333333333333333333333333333333333"
+     }
+    ],
+    "legs": [
+     {
+      "party": "payee-corp",
+      "payee": "0x1111111111111111111111111111111111111111",
+      "amount_nominal": "1500000",
+      "condition": "PASS",
+      "basis": [
+       {
+        "item_id": "msb-1",
+        "verdict": "confirmed_exempt",
+        "source": "31 CFR § 1010.100(ff)"
+       },
+       {
+        "item_id": "msb-2",
+        "verdict": "confirmed_exempt",
+        "source": "31 CFR § 1010.100(ff)"
+       }
+      ],
+      "confidence": "high"
+     }
+    ],
+    "preview": {
+     "condition_summary": "1 leg PASS",
+     "items_covered": 2
+    },
+    "attestation": {
+     "sa_hash": "0x62e63febf0b9b3b14c7dac3f3cc82c4160ef89b97a524cab104761e66eaeea68",
+     "signer": "0x45698638CFF60B188E338aa580e11ba9eb560759",
+     "signed_at": "2026-07-28T00:00:00.000Z",
+     "signature": "0x798f09bf12072f785f2834309bb0240b64a5d711bc3528177b1a31e076953a8358be9f492ec414ad6e6816df76e23710f7d78356d25cd17226ea00a448bc0b211c"
+    }
+   },
+   "provenance": "deal-desk-operator"
+  },
+  {
+   "saHash": "0x1f9be23df7d988149c181932831e26a137136fe31db19ad010dd8fed584fc69a",
+   "sa": {
+    "case_id": "citely-demo-0001",
+    "sa_version": "1",
+    "bound_to": {
+     "job_id": "104",
+     "expires_at": "2027-01-01T00:00:00.000Z"
+    },
+    "modules_used": [
+     {
+      "module_id": "us-msb",
+      "version": "2026.07.1",
+      "evidence_hash": "0x3333333333333333333333333333333333333333333333333333333333333333"
+     }
+    ],
+    "legs": [
+     {
+      "party": "payee-corp",
+      "payee": "0x1111111111111111111111111111111111111111",
+      "amount_nominal": "1500000",
+      "condition": "PASS",
+      "basis": [
+       {
+        "item_id": "msb-1",
+        "verdict": "confirmed_exempt",
+        "source": "31 CFR § 1010.100(ff)"
+       },
+       {
+        "item_id": "msb-2",
+        "verdict": "confirmed_exempt",
+        "source": "31 CFR § 1010.100(ff)"
+       }
+      ],
+      "confidence": "high"
+     }
+    ],
+    "preview": {
+     "condition_summary": "1 leg PASS",
+     "items_covered": 2
+    },
+    "attestation": {
+     "sa_hash": "0x1f9be23df7d988149c181932831e26a137136fe31db19ad010dd8fed584fc69a",
+     "signer": "0xCc981558aa955AEBa7c24fb5f255fC27f1aC1523",
+     "signed_at": "2026-07-28T00:00:00.000Z",
+     "signature": "0x03b7f6cf281ae5eee4d2bef740225221e81c43c9028314bdbbbc5813ad925bbc4106837a3edf2f92b66cde1d2ade0deff107e1df512d4c6599dc26096fc817421c"
+    }
+   },
+   "provenance": "rogue-unregistered"
+  }
+ ]
+}

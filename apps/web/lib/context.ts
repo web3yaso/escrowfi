@@ -4,7 +4,7 @@
  */
 import { pickAdapter } from "@citely-pay/chain";
 import type { ChainAdapter } from "@citely-pay/chain";
-import { demoFixtures, makeSaVerifier } from "@citely-pay/verify-adapter";
+import { demoFixtures, makeSaVerifier, loadDemoBatch, resolveRegisteredSigner, FIXTURE_PAYEE } from "@citely-pay/verify-adapter";
 import type { Address } from "viem";
 import { makeMemoryStore, makeKvStore } from "./store";
 import type { PoolStore } from "./store";
@@ -32,7 +32,18 @@ export function getAppContext(): Promise<AppContext> {
 }
 
 async function build(): Promise<AppContext> {
-  const fixtures = await demoFixtures();
+  // Demo SAs signed by Deal Desk's real operator key; the trust root is the
+  // ERC-8004 registry on-chain (ownerOf must equal the SA signer). Fall back
+  // to the batch-recorded address only if the registry RPC is unreachable.
+  const batch = loadDemoBatch();
+  let signer = batch.operatorAddress;
+  try {
+    signer = await resolveRegisteredSigner({ ...(process.env["ARC_RPC_URL"] ? { rpcUrl: process.env["ARC_RPC_URL"] } : {}) });
+  } catch {
+    console.warn("ERC-8004 registry unreachable; using batch operator address as trust root");
+  }
+  const fixtures = { sas: batch.sas, signers: [signer], badSaHash: batch.badSaHash,
+    payee: FIXTURE_PAYEE, legAmount: 1_500_000n };
   const verify = makeSaVerifier({ registeredSigners: fixtures.signers, sas: fixtures.sas });
   const chain = pickAdapter(process.env);
   const boot = (pool: import("@citely-pay/pool").Pool): void => pool.deposit("lp-demo", DEMO.lpSeed);

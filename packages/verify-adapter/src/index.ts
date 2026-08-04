@@ -83,3 +83,6 @@ export async function demoFixtures(): Promise<{
   sas.set(badSaHash, bad);
   return { sas, signers: [registered.address], badSaHash, payee: FIXTURE_PAYEE, legAmount: 1_500_000n };
 }
+
+export { loadDemoBatch, resolveRegisteredSigner, ERC8004_REGISTRY, DEAL_DESK_AGENT_ID } from "./batch.js";
+export { FIXTURE_PAYEE } from "./vendor/testing/sa-fixture.js";
