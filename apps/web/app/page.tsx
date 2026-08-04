@@ -17,9 +17,17 @@ const toMinor = (u: string): string => String(Math.round(Number(u) * 1e6));
 
 function Result({ data }: { data: { ok: boolean; body: unknown } | null }) {
   if (!data) return null;
+  const txs = (JSON.stringify(data.body) ?? "").match(/0x[0-9a-f]{64}/g) ?? [];
   return (
     <div className={`result${data.ok ? "" : " err"}`}>
       <code>{JSON.stringify(data.body, null, 1)}</code>
+      {[...new Set(txs)].map((h) => (
+        <div key={h}>
+          <a className="mono" href={`https://testnet.arcscan.app/tx/${h}`} target="_blank" rel="noreferrer">
+            arcscan ↗ {h.slice(0, 18)}…
+          </a>
+        </div>
+      ))}
     </div>
   );
 }
@@ -28,7 +36,7 @@ export default function Console() {
   const [state, setState] = useState<PoolSummary | null>(null);
   const [busy, setBusy] = useState(false);
   const [results, setResults] = useState<Record<string, { ok: boolean; body: unknown } | null>>({});
-  const [invoice, setInvoice] = useState("inv-1");
+  const [invoice, setInvoice] = useState(() => "INV-" + Math.random().toString(36).slice(2, 6).toUpperCase());
   const [escrowAmt, setEscrowAmt] = useState("2");
   const [saHash, setSaHash] = useState("");
   const [advAmt, setAdvAmt] = useState("1.5");
@@ -60,7 +68,9 @@ export default function Console() {
       <p className="sub">
         Escrow → SA-gated advance → waterfall release. Every step lands in the{" "}
         <a href="/passport/854638">credit passport</a>.
-        {state?.chainMode === "simulated" && <> <span className="badge sim">simulated chain</span></>}
+        {state?.chainMode === "arc"
+          ? <> <span className="badge ok">Arc testnet · live USDC</span></>
+          : <> <span className="badge sim">simulated chain</span></>}
       </p>
       <div className="grid">
         <div>
@@ -68,9 +78,7 @@ export default function Console() {
             <div className="step">Step 1 · Importer</div>
             <h2>Lock escrow for an invoice</h2>
             <label>Invoice</label>
-            <select value={invoice} onChange={(e) => setInvoice(e.target.value)}>
-              {["inv-1", "inv-2", "inv-3"].map((i) => <option key={i}>{i}</option>)}
-            </select>
+            <input value={invoice} onChange={(e) => setInvoice(e.target.value)} />
             <label>Amount (USDC)</label>
             <input value={escrowAmt} onChange={(e) => setEscrowAmt(e.target.value)} />
             <button disabled={busy} onClick={() => act("escrow", "/api/escrow", { invoiceId: invoice, amount: toMinor(escrowAmt) })}>
@@ -106,7 +114,8 @@ export default function Console() {
             <h2>Confirm delivery / simulate due date — waterfall release</h2>
             <label>Invoice</label>
             <select value={invoice} onChange={(e) => setInvoice(e.target.value)}>
-              {["inv-1", "inv-2", "inv-3"].map((i) => <option key={i}>{i}</option>)}
+              {[...new Set([invoice, ...(state?.escrows.filter((e) => e.status === "FUNDED").map((e) => e.invoiceId) ?? [])])]
+                .map((i) => <option key={i}>{i}</option>)}
             </select>
             <button disabled={busy} onClick={() => act("release", "/api/release", { invoiceId: invoice })}>
               Release escrow
