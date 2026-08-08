@@ -14,8 +14,7 @@ proof — not trust.**
 [**Live demo**](https://escrowfi-web.vercel.app) ·
 [Architecture](docs/architecture.md) ·
 [Deal Desk — the SA issuer](https://github.com/web3yaso/citely-deal-desk) ·
-[Formal model](packages/pool/specs/README.md) ·
-[Pitch deck](docs/pitch/deck.md)
+[Formal model](packages/pool/specs/README.md)
 
 *Track 2 — Best SME Trade Finance & Working Capital Workflow
 (Ignyte Stablecoins Commerce Stack Challenge)*
